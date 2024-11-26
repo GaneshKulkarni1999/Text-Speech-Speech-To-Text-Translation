@@ -1,0 +1,155 @@
+********google-cloud-speech***
+pip install --upgrade google-cloud-speech
+
+****google-cloud-translation*********
+pip install --upgrade google-cloud-translate
+
+
+
+***Speech/Audio to Text Traslation
+
+from google.cloud import speech
+import os
+import json
+
+# Set up authentication using a service account key
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"GOOGLE_APPLICATION_CREDENTIALS"
+
+def transcribe_audio_gcs():
+    # Create a client for the Speech API
+    client = speech.SpeechClient()
+
+    # The URI of the audio file in Google Cloud Storage
+    gcs_uri = r"gs://api_test11/Aaj Ki Raat_320(PagalWorld.com.sb).mp3"
+
+    # Construct the request payload as JSON
+    payload = {
+        "config": {
+            "encoding": "MP3",  # Encoding type for the audio
+            "sampleRateHertz": 16000,
+            "languageCode": "hi-IN"
+        },
+        "audio": {
+            "uri": gcs_uri
+        }
+    }
+
+    # Convert the payload into the required format
+    audio = speech.RecognitionAudio(uri=gcs_uri)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.MP3,
+        sample_rate_hertz=16000,
+        language_code="en-IN"
+    )
+
+    # Make the request to start the transcription process
+    request = {
+        "config": config,
+        "audio": audio
+    }
+
+    # Perform the long-running recognition request
+    response = client.long_running_recognize(config=request["config"], audio=request["audio"])
+
+    # Wait for the operation to complete
+    print("Processing audio...")
+    result = response.result(timeout=300)
+
+    # Output the transcribed text
+    for result in result.results:
+        print("Transcript: {}".format(result.alternatives[0].transcript))
+
+if __name__ == "__main__":
+    transcribe_audio_gcs()
+
+
+
+******* Cloud Translation API **********
+
+import requests
+import json
+import os
+
+# Set up authentication using a service account key
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = r"GOOGLE_APPLICATION_CREDENTIALS"
+
+def translate_text(text, target_language="mr"):
+    # Google Translation API endpoint
+    url = "https://translation.googleapis.com/language/translate/v2"
+
+    # Your API Key (replace with your actual key)
+    api_key = "api_key"
+
+    # Parameters to be sent in the API request
+    params = {
+        "q": text,
+        "target": target_language,
+        "key": api_key
+    }
+
+    # Make the POST request to the translation API
+    response = requests.post(url, data=params)
+
+    # Check if the response status is OK
+    if response.status_code == 200:
+        # Extract and return the translated text
+        result = response.json()
+        translated_text = result['data']['translations'][0]['translatedText']
+        return translated_text
+    else:
+        print("Error: ", response.status_code)
+        print(response.text)
+        return None
+
+# Example usage
+if __name__ == "__main__":
+    text = "Good Things take time"
+    translated_text = translate_text(text)
+    print(f"Translated Text: {translated_text}")
+
+
+*******Text To Speech Translation API*******
+
+import requests
+import base64
+
+# Replace with your actual Google API key
+api_key = "api_key"
+
+# Google Text-to-Speech API URL
+url = f"https://texttospeech.googleapis.com/v1/text:synthesize?key={api_key}"
+
+# Request data (Text, voice, and audio config)
+data = {
+    "input": {
+        "text": "Hello,where are you from?"  # Text to convert to speech
+    },
+    "voice": {
+        "languageCode": "en-US",  # Language code (English, US)
+        "ssmlGender": "NEUTRAL"   # Neutral gender
+    },
+    "audioConfig": {
+        "audioEncoding": "MP3"  # Output format (MP3)
+    }
+}
+
+# Make the API request
+response = requests.post(url, json=data)
+
+# Check if the request was successful
+if response.status_code == 200:
+    # Get the base64 encoded audio content from the response
+    audio_content = response.json()['audioContent']
+    
+    # Decode the base64 encoded audio content into raw bytes
+    audio_data = base64.b64decode(audio_content)
+    
+    # Save the decoded audio as an MP3 file
+    with open("output.mp3", "wb") as audio_file:
+        audio_file.write(audio_data)
+    
+    print("Audio saved as 'output1.mp3'")
+else:
+    # If the API request failed, print the error
+    print(f"Error: {response.status_code}, {response.text}")
+
